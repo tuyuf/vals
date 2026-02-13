@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuestStore } from "@/store/store";
 import { SECTIONS } from "@/data/sections";
+import { compressImage } from "@/lib/image-utils";
 import FloatingEmojis from "./FloatingEmojis";
 
 const PLACEHOLDERS: Record<string, string> = {
@@ -39,17 +40,19 @@ export default function DocumentationForm({
 
     const placeholder = PLACEHOLDERS[sectionKey] || "What happened here?";
 
-    const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64 = reader.result as string;
+        try {
+            // Compress image to avoid localStorage quota (5MB limit)
+            const base64 = await compressImage(file);
             setPreview(base64);
             setPhoto(sectionKey, base64);
-        };
-        reader.readAsDataURL(file);
+        } catch (error) {
+            console.error("Failed to compress image:", error);
+            alert("Failed to process image. Please try a smaller photo.");
+        }
     };
 
     const handleSave = () => {
